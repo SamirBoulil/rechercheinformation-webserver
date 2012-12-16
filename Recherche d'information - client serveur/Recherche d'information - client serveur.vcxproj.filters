@@ -26,25 +26,25 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Recherche d%27information - client serveur\Recherche d%27information - client serveur\index.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Recherche d%27information - client serveur\Recherche d%27information - client serveur\http.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Recherche d%27information - client serveur\Recherche d%27information - client serveur\params.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
+    <ClCompile Include="..\Recherche d%27information - client serveur\http.cpp">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Recherche d%27information - client serveur\index.cpp">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Recherche d%27information - client serveur\main.cpp">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Recherche d%27information - client serveur\Recherche d%27information - client serveur\http.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Recherche d%27information - client serveur\Recherche d%27information - client serveur\index.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Recherche d%27information - client serveur\Recherche d%27information - client serveur\main.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
+    <ClInclude Include="..\Recherche d%27information - client serveur\index.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Recherche d%27information - client serveur\params.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Recherche d%27information - client serveur\http.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

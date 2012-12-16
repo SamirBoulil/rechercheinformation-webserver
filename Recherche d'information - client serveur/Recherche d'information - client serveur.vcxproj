@@ -14,7 +14,7 @@
     <ProjectGuid>{F7F6E096-D4E8-47E1-B0A3-E8D213ECC968}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>Recherchedinformationclientserveur</RootNamespace>
-    <ProjectName>rechercheInformation-webserver</ProjectName>
+    <ProjectName>Recherche d'information - client serveur</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -89,14 +89,14 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Recherche d%27information - client serveur\Recherche d%27information - client serveur\http.h" />
-    <ClInclude Include="..\..\Recherche d%27information - client serveur\Recherche d%27information - client serveur\index.h" />
-    <ClInclude Include="..\..\Recherche d%27information - client serveur\Recherche d%27information - client serveur\params.h" />
+    <ClCompile Include="..\Recherche d%27information - client serveur\http.cpp" />
+    <ClCompile Include="..\Recherche d%27information - client serveur\index.cpp" />
+    <ClCompile Include="..\Recherche d%27information - client serveur\main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Recherche d%27information - client serveur\Recherche d%27information - client serveur\http.cpp" />
-    <ClCompile Include="..\..\Recherche d%27information - client serveur\Recherche d%27information - client serveur\index.cpp" />
-    <ClCompile Include="..\..\Recherche d%27information - client serveur\Recherche d%27information - client serveur\main.cpp" />
+    <ClInclude Include="..\Recherche d%27information - client serveur\http.h" />
+    <ClInclude Include="..\Recherche d%27information - client serveur\index.h" />
+    <ClInclude Include="..\Recherche d%27information - client serveur\params.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
