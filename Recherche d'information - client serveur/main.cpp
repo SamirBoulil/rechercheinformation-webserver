@@ -67,6 +67,7 @@ int main(int argc,char *argv[])
 		params.SchemeName.c_str(),
 		params.BaseFiles.c_str());
 
+	IndexData();
 	if ((argc==2) && (!strcmp(argv[1],"i")))
 		IndexData();
 	return(StartServer(8090));

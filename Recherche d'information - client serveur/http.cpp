@@ -5,6 +5,8 @@
 #include <sstream>
 #include <vector>
 
+#include "index.h"
+
 #define TAILLE 50
 
 extern ParamIndex params;
@@ -146,9 +148,7 @@ char HttpRequest::hexToChar(string &parameters, int i){
 
 			if(c >= '0' && c <= '9'){
 				value += c -'0';
-			}
-
-			else if(c >= 'a' && c <= 'f'){
+			}else if(c >= 'a' && c <= 'f'){
 				value += 10 + c -'a';
 			}
 			else if(c >= 'A' && c <= 'F'){

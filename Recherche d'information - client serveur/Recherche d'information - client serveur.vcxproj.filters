@@ -46,5 +46,8 @@
     <ClInclude Include="..\Recherche d%27information - client serveur\http.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
+    <ClInclude Include="..\Recherche d%27information - client serveur\include\mysql.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
