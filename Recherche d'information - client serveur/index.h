@@ -2,11 +2,14 @@
 #include "params.h"
 #include <vector>
 
+
 using namespace std;
 
 void IndexData();
-bool insertDB(vector<string> &words, string &filename, int fileId);
-bool cleanTable();
+bool insertDB(vector<string> &words, string &filename);
+void cleanTable();
+void finTransaction();
+void debutTransaction();
 
 vector<string> getFileWords(string path);
 void loadMatrixLinks(char* linksPath);

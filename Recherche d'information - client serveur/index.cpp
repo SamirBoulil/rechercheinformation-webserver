@@ -10,45 +10,81 @@
 extern ParamIndex params;
 
 #define MAX_FILE_NUMBER 39
+#define MAX_FILE_NUMBER 39
+#define HOST "localhost"
+#define USER "ri_user"
+#define BDD "ri_bdd"
+#define USER_PASS "ripass"
+
 //#define PATH_FORMAT(i) "data\files\%s.txt"
 
-void IndexData(){
-	
-	string path = "data\\files\\";
+MYSQL *conn;//Connection à la bdd
 
+/*
+ * Procédure qui permet d'indexer chaqu'un des fichiers textes relatifs à un chemin sur le disque dans 
+ * une base de données MYSQL
+ */
+void IndexData(){
+	string path = "data\\files\\";//-> #DEFINE (voir macros)
+	conn=NULL;
+
+	debutTransaction();
 	////////////////////////////////////
 	//connexion à MySQL
-	if(!cleanTable()){
-		return;
-	}
+	cleanTable();
 	cout << "Tables clean" << endl;
+
 	/////////////////////////////////////
 	vector<string> fileWords;
 	for (int i= 0; i < MAX_FILE_NUMBER; i++){
 		string filename;
-		filename = intToString(i)+".txt";
-		fileWords = getFileWords(path+filename);
-		if(!insertDB(fileWords, filename, i+1)) return;
+		filename = path+intToString(i)+".txt";
+		fileWords = getFileWords(filename);
+		if(!insertDB(fileWords, filename)) return;
 	}
+
+	finTransaction();
+	cout << "Indexation terminée !" << endl;
 }
-
-
-bool cleanTable(){
-	MYSQL *conn=NULL;
-	int i=0;
+/*
+ * Procédure qui permet de se connecter à la base de donnée et de démarrer la transaction
+ * pour faire l'indexation de nos fichier
+ */
+void debutTransaction(){
 	conn=mysql_init(conn);
-	if (mysql_real_connect(conn,"localhost","ri_user","ripass","ri_bdd",0,NULL,0)) {
-		if (mysql_query(conn,"TRUNCATE PAGE;")==1){ cout << "Error truncate PAGE"<< mysql_error(conn) << endl; return FALSE;}
-		if (mysql_query(conn,"TRUNCATE WORD;")==1){ cout << "Error truncate WORD" << endl; return FALSE;}
-		if (mysql_query(conn,"TRUNCATE WORD_PAGE;")==1){ cout << "Error truncate WORD_PAGE" << endl; return FALSE;}
-		mysql_close(conn);
-	}else{
-		cout << "Clean tables : not connected to mysql" << endl;
-		return false;
+	if (mysql_real_connect(conn,"localhost","ri_user","ripass","ri_bdd",0,NULL,0) == NULL) {
+		perror("Impossible de se connecter à la base de données");
+		cout << mysql_error(conn) << endl;
 	}
-	return true;
+	mysql_autocommit(conn, 0);//Pour pouvoir effectuer la transaction
+	mysql_query(conn, "START TRANSACTION;");//Début transaction
 }
 
+
+/*
+ * Cette fonction permet de "committer" les résultats et fermer la connexion à la base de données.
+ */
+void finTransaction(){
+	if(mysql_commit(conn)){perror(mysql_error(conn));}
+	mysql_close(conn);
+}
+
+/*
+ * Cette procédure vide toutes les tables de la base de données
+ */
+void cleanTable(){
+	int i=0;
+	if (mysql_query(conn,"TRUNCATE PAGE;")==1){ cout << "Error truncate PAGE"<< mysql_error(conn) << endl;}
+	if (mysql_query(conn,"TRUNCATE WORD;")==1){ cout << "Error truncate WORD" << endl;}
+	if (mysql_query(conn,"TRUNCATE WORD_PAGE;")==1){ cout << "Error truncate WORD_PAGE" << endl;}
+}
+
+/*
+ * Fonction qui permet de lire un fichier sur disque, récupère les mots  
+ * et les affectent à un vecteur.
+ * Parameters : path - string : réprésente le chemin vers le fichier à lire.
+ * Return : vector<string> représente la liste des mots du fichier.
+ */
 vector<string> getFileWords(string path){
 	
 	vector<string> temp;
@@ -57,7 +93,6 @@ vector<string> getFileWords(string path){
 	FILE* file;
 	
 	if((file = fopen(path.c_str(), "r")) != NULL){
-		cout << "file open :" << path.c_str() << endl;
 		while((c = fgetc(file)) !=(unsigned char)EOF){
 			//On s'est rendu compte qu'utiliser un char pour lire les caractères du fichier amenait parfois 
 			// à utiliser des caractères qui ont des valeurs signée négatives (-23).
@@ -73,7 +108,7 @@ vector<string> getFileWords(string path){
 				word += c;
 			}else{ //caractère séparateur
 				if(!word.empty()){
-					cout << word << endl;
+					//cout << word << endl;
 					temp.push_back(word);
 					word.clear();
 				}
@@ -86,51 +121,47 @@ vector<string> getFileWords(string path){
 }
 
 
-
-bool insertDB(vector<string> &words, string& filename, int fileId){
+/*
+ * Fonction qui insère chaqu'un des mots passés en paramètre dans la base de données (avec le noms de fichiers d'où ils proviennent).
+ * Parameters : words : Liste des mots du fichier;
+ *				filename : le nom du fichier
+ * return boolean : true si l'insertion a réussie; false sinon.
+ */
+bool insertDB(vector<string> &words, string& filename){
 	static int GLOBAL_WORD_ID = 1;
 
-	//connexion à MySQL
-	MYSQL *conn=NULL;
-	MYSQL_RES *res_set; MYSQL_ROW row;
-	int i=0;
-	conn=mysql_init(conn);
-	if (mysql_real_connect(conn,"localhost","ri_user","ripass","ri_bdd",0,NULL,0)) {
-		//Insertion de la page
-		//string requete = "INSERT INTO `page`(`id_page`, `url`, `pr`, `resume`) VALUES ('"+intToString(fileId)+"', '"+filename.c_str()+"', 0, '"+filename.c_str()+"');";
-		string requete = "INSERT INTO page(id_page, url) VALUES ("+intToString(fileId)+", '"+filename.c_str()+"');";
-		cout << requete.c_str() << endl;
+	int i=0, pageId=0;
+	//Insertion de la page
+	//string requete = "INSERT INTO `page`(`id_page`, `url`, `pr`, `resume`) VALUES ('"+intToString(fileId)+"', '"+filename.c_str()+"', 0, '"+filename.c_str()+"');";
+	string requete = "INSERT INTO page(id_page, url) VALUES (NULL, '"+filename+"');";
+	//cout << requete.c_str() << endl;
 
-		if ((mysql_query(conn, requete.c_str()))){
-			cout << "Error inserting in page" << endl;
-			return FALSE;
-		}
-
-		////Insertion des mots pour la page
-		for(int j=0; j<words.size(); j++){
-			requete = "INSERT INTO word(id\_word, word) VALUES ("+intToString(GLOBAL_WORD_ID)+",'"+words[j]+"')";
-			cout << requete << endl;
-			if (mysql_query(conn,requete.c_str())){cout << "Error inserting WORD table" << endl; return FALSE;}//ROLLBACK;
-
-
-			requete = "INSERT INTO word_page(id_word, id_page) VALUES ("+intToString(GLOBAL_WORD_ID)+","+intToString(fileId)+")";
-			if (mysql_query(conn,requete.c_str())){cout << "Error inserting WORD_PAGE" << endl; return FALSE;}//ROLLBACK;
-
-			GLOBAL_WORD_ID++;
-		}
-
-		mysql_query(conn, "COMMIT;");
-		mysql_close(conn);
-	}else{
-		cout << "not connected to mysql" << endl;
-		return false;
+	if ((mysql_query(conn, requete.c_str()))){
+		perror(mysql_error(conn));
+		cout << "Error inserting in page" << endl;
+		return FALSE;
 	}
-	
-	cout << intToString(GLOBAL_WORD_ID) << endl;
+	pageId = mysql_insert_id(conn);
+	cout << "page Id :" << pageId << endl;;
 
+	////Insertion des mots pour la page
+	for(int j=0; j<words.size(); j++){
+		requete = "INSERT INTO word(id\_word, word) VALUES (NULL,'"+words[j]+"')";
+		if (mysql_query(conn,requete.c_str())){cout << "Error inserting WORD table"<< mysql_error(conn) << endl; return FALSE;}//ROLLBACK;
+
+
+		requete = "INSERT INTO word_page(id_word, id_page) VALUES (LAST_INSERT_ID(),"+intToString(pageId)+")";
+		if (mysql_query(conn,requete.c_str())){cout << "Error inserting WORD_PAGE"<< mysql_error(conn) << endl; return FALSE;}//ROLLBACK;
+
+		GLOBAL_WORD_ID++;
+	}
 	return TRUE;
 }
 
+
+/*
+ * Fonction qui prend un entier en paramètre et qui la convertie en string
+ */
 string intToString(int a){
 	stringstream out;
 	out << a;
