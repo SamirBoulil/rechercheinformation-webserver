@@ -11,6 +11,10 @@
 
 extern ParamIndex params;
 
+// FAIRE DU LEFT JOIN POUR LA REQUETE
+// SELECT URL, DESC, PR FROM PAGE LEFT JOIN WORD ON p.id_page AND W1.word = truc
+// WHERE qskfq <> null or qjsfbqsfb <> null
+
 void HttpRequest::GetRequest(SOCKET sd)
 {
 	char buffer[TAILLE];

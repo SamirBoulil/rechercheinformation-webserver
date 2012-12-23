@@ -2,17 +2,22 @@
 #include "params.h"
 #include <vector>
 
-
 using namespace std;
 
+//Main
 void IndexData();
-bool insertDB(vector<string> &words, string &filename);
-void cleanTable();
+
+//Mysql DB
+bool insertDB(vector<string> &words, char* filename);
+bool cleanTable();
+vector<string> getFileWords(char* path);
+
+//PageRank
+vector<vector<int>> loadMatrixLinks(char* linksPath);
+int* getPageCounts(vector<vector<int>> &links);
+double* calculatePageRank(vector<vector<int>> &links, int* cpi);
+
+//Outils
 void finTransaction();
 void debutTransaction();
-
-vector<string> getFileWords(string path);
-void loadMatrixLinks(char* linksPath);
-
-//TOOLS
-string intToString(int a);
+void freeStructures(double* pageRanks,int* cpi);

@@ -9,5 +9,5 @@ struct ParamIndex
 	string Password;
 	string ServerName;
 	string SchemeName;
-	string BaseFiles;
+	string BaseFiles;//Chemin absolu vers le répertoire qui contient links.txt et data/
 };
