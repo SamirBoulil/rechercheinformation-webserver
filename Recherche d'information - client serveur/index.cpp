@@ -15,19 +15,8 @@ extern ParamIndex params;
 
 #define MAX_FILE_NUMBER 39
 
-#define HOST "localhost"
-#define USER "ri_user"
-#define BDD "ri_bdd"
-#define USER_PASS "ripass"
-
-//params.Login = "localhost";
-//params.Password = "ripass";
-//params.ServerName = "ri_bdd";
-//params.SchemeName = "ri_bdd";
-//params.BaseFiles = "ri_bdd";*/
-
-#define PATH "data\\files\\"//-> #DEFINE (voir macros)
-#define MATRIX_LINKS_PATH "data\\links.txt"
+#define FILE_PATH "files\\"//-> #DEFINE (voir macros)
+#define MATRIX_LINKS_PATH "links.txt"
 
 
 #define EPSILON 0.000001
@@ -57,19 +46,22 @@ void IndexData(){
 
 
 	//Calcul du page rank pour le ieme fichier
-	vector<vector<int>> matrix_links = loadMatrixLinks(MATRIX_LINKS_PATH);
+	char matrixPath[1024];
+	sprintf(matrixPath,"%s%s", params.BaseFiles.c_str(), MATRIX_LINKS_PATH);
+	vector<vector<int>> matrix_links = loadMatrixLinks(matrixPath);
 	int* cpi = getPageCounts(matrix_links);//Calcul de la somme des liens entrant pour chaque page
 	double* pageRanks = calculatePageRank(matrix_links, cpi);//calcul du page rank pour le fichier i
 
 
 	//Ajout des n-uplets
 	char filename[1024];//Assez grand pour éviter le realloc (dans le cadre de l'exercice on sait que ça ne dépassera pas cette longeur)
+	
 	for (int i= 0; i < MAX_FILE_NUMBER; i++){
 		//Insertion des mots de ce fichier dans la bdd avec le score PR
-		sprintf(filename,"%s%i.txt", PATH, i);
-		cout << filename << endl;
+		sprintf(filename,"%s%s%d.txt", params.BaseFiles.c_str(), FILE_PATH, i);
 		fileWords = getFileWords(filename);
-		if(!insertDB(fileWords, filename)){
+		cout << filename << endl;
+		if(!insertDB(fileWords, filename, pageRanks[i])){
 			perror("Erreur d'insertion des nuplets");
 			return;
 		}
@@ -204,7 +196,7 @@ double* calculatePageRank(vector<vector<int>> &links, int* cpi){
  */
 void debutTransaction(){
 	conn=mysql_init(conn);
-	if (mysql_real_connect(conn,"localhost","ri_user","ripass","ri_bdd",0,NULL,0) == NULL) {
+	if (mysql_real_connect(conn,params.ServerName.c_str(),params.Login.c_str(),params.Password.c_str(),params.SchemeName.c_str(),0,NULL,0) == NULL) {
 		perror("Impossible de se connecter à la base de données");
 		cout << mysql_error(conn) << endl;
 	}
@@ -224,7 +216,6 @@ void finTransaction(){
 
 /*
  * Cette procédure vide toutes les tables de la base de données
- * Indications pour utiliser les  prepares statements ici : http://lgallardo.com/en/2011/06/23/sentencias-preparadas-de-mysql-en-c-ejemplo-completo/
  * Retourne TRUE si les tables ont bien été vidées, FALSE sinon
  */
 bool cleanTable(){
@@ -269,7 +260,6 @@ vector<string> getFileWords(char* path){
 				word += c;
 			}else{ //caractère séparateur
 				if(!word.empty()){
-					//cout << word << endl;
 					temp.push_back(word);
 					word.clear();
 				}
@@ -289,16 +279,17 @@ vector<string> getFileWords(char* path){
  *				filename : le nom du fichier
  * return boolean : true si l'insertion a réussie; false sinon.
  */
-bool insertDB(vector<string> &words, char* filename){
+bool insertDB(vector<string> &words, char* filename, double pageRank){
 	int pageId=0, wordId=0;
 	bool returnValue = TRUE;
 	MYSQL_RES *res_set;
 	MYSQL_ROW row;
 
 	//Insertion de la page
-	char *requete =(char*) malloc(1024+strlen(filename)*sizeof(char));//1024+Taille du filename (pour éviter le realloc)
-	sprintf(requete, "INSERT INTO page(id_page, url) VALUES (NULL, '%s');", filename);
+	char requete[2048], filenamebuf[2048];
+	mysql_real_escape_string(conn, filenamebuf, filename,strlen(filename));
 
+	sprintf(requete, "INSERT INTO page(id_page, url, pr, resume) VALUES (NULL, \"%s\", %f, '%s %s %s');", filenamebuf, pageRank, words[8].c_str(), words[9].c_str(), words[10].c_str());
 	if ((mysql_query(conn, requete))){
 		perror(mysql_error(conn));
 		cout << "Error inserting in page" << endl;
@@ -336,6 +327,42 @@ bool insertDB(vector<string> &words, char* filename){
 		if (mysql_query(conn,requete)){cout << "Error inserting WORD_PAGE : "<< mysql_error(conn) << endl;  returnValue= FALSE; break;}//ROLLBACK;
 	
 	}
-	free(requete);
 	return returnValue;
+}
+
+/*
+ * Fonction qui prend en argument une liste de mots et qui execute la recherche sur la base de données indexée
+ * Elle retourne une liste de résultats correspondant à une description des pages
+ */
+vector<vector<string>> processResearch(vector<string> &keywords){
+	conn = NULL;
+	MYSQL_RES *res_set;
+	MYSQL_ROW row;
+	char requete[2048];
+	vector<vector<string>> res;
+	vector<string> temp;
+
+	debutTransaction();
+	char keywordsSQL[1024] = "";
+	for(unsigned int i =0; i<keywords.size(); i++){
+		strcat(keywordsSQL, ("'"+keywords[i]+"'").c_str());
+		if(i < keywords.size()-1){
+			strcat(keywordsSQL, ",");
+		}
+	}
+	sprintf(requete,"SELECT DISTINCT p.id_page, p.resume, p.url, p.pr FROM (PAGE p Inner join word_page wp ON p.id_page = wp.id_page) INNER JOIN WORD w ON w.id_word = wp.id_word WHERE w.word IN (%s) ORDER BY p.pr LIMIT 25;", keywordsSQL);
+	cout << requete << endl;
+	if (!mysql_query(conn,requete)){
+		if (res_set=mysql_store_result(conn)) {
+			while(row=mysql_fetch_row(res_set)){
+				for(unsigned int i=0; i<4; i++) temp.push_back(row[i]);
+				res.push_back(temp);	
+			}
+			mysql_free_result(res_set);
+		}
+	}else{
+		cout << "Error querying DB :"<< mysql_error(conn) << endl;
+	}
+	finTransaction();
+	return res;
 }

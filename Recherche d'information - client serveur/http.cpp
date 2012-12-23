@@ -4,16 +4,12 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
-
+#include <map>
 #include "index.h"
 
 #define TAILLE 50
-
+#define QUERY "q"
 extern ParamIndex params;
-
-// FAIRE DU LEFT JOIN POUR LA REQUETE
-// SELECT URL, DESC, PR FROM PAGE LEFT JOIN WORD ON p.id_page AND W1.word = truc
-// WHERE qskfq <> null or qjsfbqsfb <> null
 
 void HttpRequest::GetRequest(SOCKET sd)
 {
@@ -31,9 +27,6 @@ void HttpRequest::GetRequest(SOCKET sd)
 			drapeau= false;
 		}
 	}
-
-	cout << "CLIENT :\r\n" <<message << endl;
-
 
 	stringstream ss(message); // Insert the string into a stream
 	string buf;
@@ -122,7 +115,10 @@ char* HttpRequest::strMonth(int mon)
 	return("Err Month");
 }
 
-
+/**
+	Nettoie les paramètres de l'url de tous les caractères en hexadécimal et 
+	transforme le + en un espace.
+*/
 string HttpRequest::cleanParamaters(string &parameters){
 	int i = 0;
 	string dest;
@@ -130,17 +126,19 @@ string HttpRequest::cleanParamaters(string &parameters){
 		
 		switch(parameters[i]){
 			case '+': dest +=' ';break;
-			case '%': dest += hexToChar(parameters, i);i=i+2;
+			case '%': dest += hexToChar(parameters, i);i=i+2; break;
 			default :dest += parameters[i];
-		}
-
-		
+		}		
 		i++;		
 	}
 
 	return dest;
 }
 
+/**
+	Remplace un caractères codé en hexadécimal dans l'url en un caractère 
+	normal.
+*/
 char HttpRequest::hexToChar(string &parameters, int i){
 	int j ;
 	char value = 0;
@@ -148,66 +146,97 @@ char HttpRequest::hexToChar(string &parameters, int i){
 	for(j=1; j<3 ;j++){
 			
 			char c=parameters[i+j];
-			cout << "char " << c <<endl;
 
 			if(c >= '0' && c <= '9'){
 				value += c -'0';
-			}else if(c >= 'a' && c <= 'f'){
+			}
+			else if(c >= 'a' && c <= 'f'){
 				value += 10 + c -'a';
 			}
 			else if(c >= 'A' && c <= 'F'){
 				value += 10 + c -'A';
 			}
-			if(j==1) value << 4; // décalage de 2^4 donc 16
 
 
-			cout << "value " << value << endl;
+			if(j==1) value = value << 4; // décalage de 2^4 donc 16
+
 	}
 	return value;
 }
 
 void HttpRequest::processRequest(string &filename, SOCKET sd){
-	cout << "filename: " << filename << endl;
 	string result;
 	char* code;
 
 	string path;
 	string parameters;
+
 	path = filename.substr(0,filename.find("?"));
 	parameters = filename.substr(filename.find("?")+1,filename.size()-1);
-
 	parameters = cleanParamaters(parameters);
+	
 
-	cout << "path " << path << endl;
-	cout << "parameters " << parameters << endl;
+
+	vector<string> split ;
+	split = explode(parameters, '&');
+
+	map<string, string> mapParams;
+	
+	for(int unsigned i=0;i<split.size();i++){
+		vector<string> param;
+		param = explode(split[i], '=');
+		
+		if(param.size() == 2){
+			mapParams[param[0]] = param[1];
+		}	
+	} 
+	
+
 
 	result.append(readFile("header.htm"));
 
 	if(!path.compare("/search")){
 		code = "200";
-		processResults(result, parameters);
+		cout << mapParams[QUERY] << endl;
+		processResults(result, explode(mapParams[QUERY], ' '));//WTF
 	}else if(!path.compare("/")){
 		code = "200";
 	}else{
 		code="404";
 	}
-
 	result.append(readFile("footer.htm"));
+
+
 	string head;
 	SendHeader(head, code);
-	cout << result << endl;
 	head.append(result);
-
 	send(sd, head.c_str(), head.size(), 0); 
 }
 
-void HttpRequest::processResults(string &htmlpage, string keywords){
+void HttpRequest::processResults(string &htmlpage, vector<string>& keywords){
 	htmlpage += "<br/><h3>Resultats pour la recherche :\"";
-	htmlpage += keywords;
+	for(unsigned int i=0; i<keywords.size(); i++) htmlpage += keywords[i]+" ";
 	htmlpage += "\"</h3><br/>";
 
+	htmlpage += "<table><tr><td>#</td><td>nom</td><td>resume</td><td>Score</td><td>lien</td></tr>";
 	// Requêtage
-	//for blabla
+	vector<vector<string>> res;
+	res = processResearch(keywords);
+
+
+	for(unsigned int i=0; i<res.size(); i++){
+		for(unsigned int j=0; j<res[i].size(); j++){
+			ostringstream convert;
+			convert << i;      // insert the textual representation of 'Number' in the characters in the stream
+			htmlpage += "<tr><td>"+convert.str()+"</td>";
+			htmlpage += "<td>"+res[i][PAGE_ID]+"</td>";
+			htmlpage += "<td>"+res[i][RESUME]+"</td>";
+			htmlpage += "<td>"+res[i][PR]+"</td>";
+			htmlpage += "<td><a href=\"file:///"+res[i][URL]+"\" TARGET=\"_blank\">GO</a></td></tr>";
+		}
+	}
+	htmlpage += "</table>";
+
 }
 
 
@@ -216,4 +245,24 @@ string HttpRequest::readFile(const char* filename){
 	stringstream out;
 	out << in.rdbuf();
 	return out.str();
+}
+
+
+
+vector<string> HttpRequest::explode(const string& str, char separator)
+{
+	vector<string> dest;
+    string::size_type p = 0;
+    while (p != string::npos) 
+    {
+        const std::string::size_type p2 = str.find_first_of(separator, p);
+        if (p2 != std::string::npos) {
+			dest.push_back(str.substr(p, p2-p));
+            p = p2 + 1;
+        } else {
+            dest.push_back(str.substr(p));
+            p = p2;
+        }
+    }
+    return dest;
 }

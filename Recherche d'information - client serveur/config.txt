@@ -1,0 +1,5 @@
+ri_user
+ripass
+localhost
+ri_bdd
+C:\Users\Samir\Documents\Visual Studio 2012\Projects\rechercheinformation-webserver\Recherche d'information - client serveur\data\
