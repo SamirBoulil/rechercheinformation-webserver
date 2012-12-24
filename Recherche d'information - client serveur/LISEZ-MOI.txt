@@ -1,0 +1,44 @@
+BOULIL Samir
+HOCQUARD Alexandre
+Compte rendu de TP de recherche d'information : Elaboration d'un moteur de recherche à l'aide de l'algorithme pageRank.
+
+client-serveur :
+	- Les pages HTML sont générées grâce à des fichiers templates. header.htm.
+	- Pour le css nous avons utiliser le bootstrap de twitter. 
+
+Indexation :
+	- l'insertion des mots dans la table word est faite quoi qu'il arrive.
+	  On récuperera l'id du mot avec un select pour insertion dans la table word_page.
+	- Les requêtes sont souvent stockés dans des tableau de caractères de taille 1024.
+	  On pourrait tester la longueur des requêtes et réalloués de la mémoire en fonction mais dans l'exercice ça n'a pas été le cas.
+	- Les paramètres utilisés pour se connecter à la base de données sont chargés à partir du fichier config.txt comme demandé.
+	
+
+Des warnings concernant l'utilisation de fonction dépréciées en c++ (sprintf) sont désactivées
+avec #define _CRT_SECURE_NO_DEPRECATE
+
+
+Apports personnels :
+
+- Interessant de faire un serveur web avec du C++. Cela permet d'observer les échanges entre le client et le serveur,
+en passant par le requêtage sur la base de données.
+
+- De la même manière on se rend compte qu'en utilisant des fonctions C pour traiter les chaînes de caractères notre programme est
+plus efficace (moins de traitements et plus rapide). En revanche, on a tendance à mélanger parfois les types C et C++ au cours 
+du développement (vector, char*).
+
+- Les fonctions C (sprintf) sont plus simples pour mettre en forme des chaines de caractères (requêtes SQL) que les méthodes C++
+exemple : Mettre en forme un entier dans une requete
+
+C++:
+osstring os;
+os << monEntier;
+maString += "Mon entier est : ";
+maString += os.c_str();
+
+C:
+sprintf(monCharEtoileAlloué,"Mon entier est : %d", monEntier);
+
+
+
+

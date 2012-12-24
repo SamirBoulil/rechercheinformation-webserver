@@ -1,11 +1,17 @@
 <HTML>
 <HEAD>
-<META NAME="GENERATOR" Content="Microsoft Visual Studio">
-<TITLE>SA Recherche</TITLE>
+    <META NAME="GENERATOR" Content="Microsoft Visual Studio">
+    <TITLE>SA Recherche</TITLE>
+    <link rel="stylesheet" href="http://twitter.github.com/bootstrap/assets/css/bootstrap.css"/>
+
 </HEAD>
 <BODY>
-    <h1> Bienvenue sur SA Recherche</h1>
-    <form method="get" action="/search">
-        <input type="text" placeholder="Saisissez des mots-clés correspondant à votre recherche" name="q"/>
-        <input type="submit" value="Go"/>
-    </form>
+    <div class="navbar">
+        <div class="navbar-inner">
+            <a class="brand" href="#">SA Recherche</a>
+            <form class="navbar-form pull-left" method="get" action="/search">
+                <input class="span8" type="text" placeholder="Saisissez des mots-clés correspondant à votre recherche" name="q"/>
+                <button type="submit" class="btn">GO</button>
+            </form>
+        </div>
+    </div>

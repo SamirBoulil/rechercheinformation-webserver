@@ -3,28 +3,24 @@
 #include "index.h"
 #include <Windows.h>
 #include "include\mysql.h"
-
 #include <iostream>
-#include <fstream>
-#include <sstream>
 #include <stdio.h>
-
-#include <time.h> 
-
-extern ParamIndex params;
-
-#define MAX_FILE_NUMBER 39
-
-#define FILE_PATH "files\\"//-> #DEFINE (voir macros)
-#define MATRIX_LINKS_PATH "links.txt"
+#include <time.h> //Pour calculer le temps de traitement lors de l'indexation avec la fonction clock();
 
 
+/*
+ * Constante pour calculer le pageRank
+ */
 #define EPSILON 0.000001
 #define D 0.85
 
-//#define PATH_FORMAT(i) "data\files\%s.txt"
-
-MYSQL *conn;//Connection à la bdd
+/*
+ * Variables et constantes pour la connexion à la base de données et pour acceder aux données sur disque
+ */
+MYSQL *conn;
+extern ParamIndex params;
+#define FILE_PATH "files\\"//-> #DEFINE (voir macros)
+#define MATRIX_LINKS_PATH "links.txt"
 
 /*
  * Procédure qui permet d'indexer chaqu'un des fichiers textes relatifs à un chemin sur le disque dans 
@@ -34,6 +30,7 @@ void IndexData(){
 	double debut, fin;
 	debut = clock();
 	conn=NULL;
+
 	vector<string> fileWords;
 
 	//Nettoyage bdd
@@ -42,7 +39,6 @@ void IndexData(){
 		perror("Erreur de suppression des tables");
 		return;
 	}
-	cout << "Tables clean" << endl;
 
 
 	//Calcul du page rank pour le ieme fichier
@@ -56,7 +52,7 @@ void IndexData(){
 	//Ajout des n-uplets
 	char filename[1024];//Assez grand pour éviter le realloc (dans le cadre de l'exercice on sait que ça ne dépassera pas cette longeur)
 	
-	for (int i= 0; i < MAX_FILE_NUMBER; i++){
+	for (unsigned int i= 0; i < matrix_links.size(); i++){
 		//Insertion des mots de ce fichier dans la bdd avec le score PR
 		sprintf(filename,"%s%s%d.txt", params.BaseFiles.c_str(), FILE_PATH, i);
 		fileWords = getFileWords(filename);
@@ -74,7 +70,11 @@ void IndexData(){
 	cout << "Temps de traitement : " << (double)(fin-debut)/(double) CLOCKS_PER_SEC<< endl;
 }
 
-void freeStructures(double* pageRanks,int* cpi){
+/*
+ * Fonction qui désaloue la mémoire allouée par le programme via malloc ou calloc
+ * Paramètres : pageranks, le tableau de pageRank, cpi le table de la somme des pages pointant vers les pages.
+ */
+void freeStructures(double* pageRanks, int* cpi){
 	free(pageRanks);
 	free(cpi);
 	cout << "Et mémoire propre" << endl;
@@ -91,11 +91,17 @@ vector<vector<int>> loadMatrixLinks(char* linksPath){
 	FILE* file;
 	vector<vector<int>> liens;
 	vector<int> temp;
+	int matrix_size = 0;
 
-	cout << "load matrix link" << endl;
 	if((file = fopen(linksPath, "r")) != NULL){
-		//Lire la première ligne
-		while(((c = fgetc(file)) != EOF) && (c != '\n'));
+		//Lire la première ligne qui correspond à la taille de la matrice carrée
+		while(((c = fgetc(file)) != EOF) && (c != '\n')){
+			if(c>='0' || c<='9'){
+				matrix_size = matrix_size*10+(c-'0');
+			}
+		}
+
+		cout << "Taille de la matrice de liaison : " << matrix_size << endl;
 
 		while((c = fgetc(file)) != EOF){
 			if(c >= '0' && c <= '9'){
@@ -135,6 +141,11 @@ vector<vector<int>> loadMatrixLinks(char* linksPath){
 	return liens;
 }
 
+/*
+ * Fonction qui calcule le nombre de page pointant vers chaque page de la matrice de liaison passée en paramètre
+ * Paramèmtre : la matrice de liaison des pages
+ * Retourne : Un tableau ou les valeurs correspondent à la somme des pages pointant vers la page de la ieme case.
+ */
 int* getPageCounts(vector<vector<int>> &links){
 	int* cpi = (int*) calloc(links.size(), sizeof(int));
 
@@ -156,13 +167,18 @@ int* getPageCounts(vector<vector<int>> &links){
 	return cpi;
 }
 
-
+/*
+ * Fonction qui calcule le pageRank d'un ensemble de document avec
+ * Paramètres : links : une matrice de liens des documents
+ *				cpi : un tableau de la somme des pages pointant vers ces pages
+ * Retourne : un tableau de double correspondant au score du pagerank pour les pages.
+ */
 double* calculatePageRank(vector<vector<int>> &links, int* cpi){
 	double pageRankScore = 0.0, ancienPageRank = 0.0;
 	bool drapeau = false;
 	unsigned int i=0;
-	double* pageRanks = (double*) calloc(MAX_FILE_NUMBER, sizeof(double));//Mise à zero du tableau
-	double* pageRanksTemp = (double*) calloc(MAX_FILE_NUMBER, sizeof(double));
+	double* pageRanks = (double*) calloc(links.size(), sizeof(double));//Mise à zero du tableau
+	double* pageRanksTemp = (double*) calloc(links.size(), sizeof(double));
 
 	while(!drapeau){
 		//pour chaque page on calcule le nouveau score
@@ -195,6 +211,7 @@ double* calculatePageRank(vector<vector<int>> &links, int* cpi){
  * pour faire l'indexation de nos fichier
  */
 void debutTransaction(){
+	cout << "Connexion à la BDD" << endl;
 	conn=mysql_init(conn);
 	if (mysql_real_connect(conn,params.ServerName.c_str(),params.Login.c_str(),params.Password.c_str(),params.SchemeName.c_str(),0,NULL,0) == NULL) {
 		perror("Impossible de se connecter à la base de données");
@@ -332,7 +349,7 @@ bool insertDB(vector<string> &words, char* filename, double pageRank){
 
 /*
  * Fonction qui prend en argument une liste de mots et qui execute la recherche sur la base de données indexée
- * Elle retourne une liste de résultats correspondant à une description des pages
+ * Retourne : Elle retourne une liste de résultats correspondant à une description des pages
  */
 vector<vector<string>> processResearch(vector<string> &keywords){
 	conn = NULL;
@@ -350,13 +367,13 @@ vector<vector<string>> processResearch(vector<string> &keywords){
 			strcat(keywordsSQL, ",");
 		}
 	}
-	sprintf(requete,"SELECT DISTINCT p.id_page, p.resume, p.url, p.pr FROM (PAGE p Inner join word_page wp ON p.id_page = wp.id_page) INNER JOIN WORD w ON w.id_word = wp.id_word WHERE w.word IN (%s) ORDER BY p.pr LIMIT 25;", keywordsSQL);
-	cout << requete << endl;
+	sprintf(requete,"SELECT DISTINCT p.id_page, p.resume, p.url, p.pr FROM (PAGE p Inner join word_page wp ON p.id_page = wp.id_page) INNER JOIN WORD w ON w.id_word = wp.id_word WHERE w.word IN (%s) GROUP BY p.id_page ORDER BY p.pr DESC;", keywordsSQL);
 	if (!mysql_query(conn,requete)){
 		if (res_set=mysql_store_result(conn)) {
 			while(row=mysql_fetch_row(res_set)){
 				for(unsigned int i=0; i<4; i++) temp.push_back(row[i]);
 				res.push_back(temp);	
+				temp.clear();
 			}
 			mysql_free_result(res_set);
 		}

@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_DEPRECATE //Les fonctions C comme fopen, sptrinf dépréciées en C++
 #include "http.h"
 #include <stdlib.h>
 #include <iostream>
@@ -11,6 +12,9 @@
 #define QUERY "q"
 extern ParamIndex params;
 
+/*
+ * Méthode qui gère les requêtes GET sur le serveur
+ */
 void HttpRequest::GetRequest(SOCKET sd)
 {
 	char buffer[TAILLE];
@@ -41,7 +45,9 @@ void HttpRequest::GetRequest(SOCKET sd)
 	processRequest(filename, sd);
 }
 
-
+/*
+ * Méthode qui formatte le Header du protocol HTML au client pour la requête demandée
+ */
 void HttpRequest::SendHeader(string &AnswerBuf,char *code)
 {
 	struct tm *newtime;
@@ -80,6 +86,9 @@ Content-Type: text/html\r\n\
 \r\n";
 }
 
+/*
+ * fonction qui retourne en lettre le jour à partir de son numéro de semaine
+ */
 char* HttpRequest::strDay(int day)
 {
 	switch(day)
@@ -95,6 +104,9 @@ char* HttpRequest::strDay(int day)
 	return("Err Day");
 }
 
+/*
+ * fonction qui retourne en lettre le mois à partir du numéro du mois
+ */
 char* HttpRequest::strMonth(int mon)
 {
 	switch(mon)
@@ -115,10 +127,10 @@ char* HttpRequest::strMonth(int mon)
 	return("Err Month");
 }
 
-/**
-	Nettoie les paramètres de l'url de tous les caractères en hexadécimal et 
-	transforme le + en un espace.
-*/
+/*
+ * Nettoie les paramètres de l'url de tous les caractères en hexadécimal et 
+ * transforme le + en un espace.
+ */
 string HttpRequest::cleanParamaters(string &parameters){
 	int i = 0;
 	string dest;
@@ -135,9 +147,9 @@ string HttpRequest::cleanParamaters(string &parameters){
 	return dest;
 }
 
-/**
-	Remplace un caractères codé en hexadécimal dans l'url en un caractère 
-	normal.
+/*
+ * Remplace un caractères codé en hexadécimal dans l'url en un caractère 
+ * normal.
 */
 char HttpRequest::hexToChar(string &parameters, int i){
 	int j ;
@@ -164,6 +176,10 @@ char HttpRequest::hexToChar(string &parameters, int i){
 	return value;
 }
 
+/*
+ * Méthode qui génère la réponse du client en fonction de sa demande et qui l'envoie dans la socket
+ *
+ */
 void HttpRequest::processRequest(string &filename, SOCKET sd){
 	string result;
 	char* code;
@@ -213,33 +229,41 @@ void HttpRequest::processRequest(string &filename, SOCKET sd){
 	send(sd, head.c_str(), head.size(), 0); 
 }
 
+/*
+ * Fonction qui effectue et met en forme le résultat de la recherche du client sous forme de tableau.
+ * Paramètres : htmlpage : référence sur le buffer représente la page HTML
+ *				keywords : la liste de mots-clés pour la recherche
+ */
 void HttpRequest::processResults(string &htmlpage, vector<string>& keywords){
 	htmlpage += "<br/><h3>Resultats pour la recherche :\"";
 	for(unsigned int i=0; i<keywords.size(); i++) htmlpage += keywords[i]+" ";
 	htmlpage += "\"</h3><br/>";
 
-	htmlpage += "<table><tr><td>#</td><td>nom</td><td>resume</td><td>Score</td><td>lien</td></tr>";
+	htmlpage += "<table class=\"table table-striped\"><thead><tr><th>#</th><th>nom</th><th>resume</th><th>Score</th><th>lien</th></tr></thead><tbody>";
 	// Requêtage
 	vector<vector<string>> res;
 	res = processResearch(keywords);
 
 
 	for(unsigned int i=0; i<res.size(); i++){
-		for(unsigned int j=0; j<res[i].size(); j++){
 			ostringstream convert;
-			convert << i;      // insert the textual representation of 'Number' in the characters in the stream
+			convert << i;// insert the textual representation of 'Number' in the characters in the stream
 			htmlpage += "<tr><td>"+convert.str()+"</td>";
-			htmlpage += "<td>"+res[i][PAGE_ID]+"</td>";
+			htmlpage += "<td>"+res[i][PAGE_ID]+".txt</td>";
 			htmlpage += "<td>"+res[i][RESUME]+"</td>";
 			htmlpage += "<td>"+res[i][PR]+"</td>";
 			htmlpage += "<td><a href=\"file:///"+res[i][URL]+"\" TARGET=\"_blank\">GO</a></td></tr>";
-		}
 	}
-	htmlpage += "</table>";
+	htmlpage += "</tbody></table>";
 
 }
 
-
+/*
+ * Fonction qui permet de lire des fichiers sur disque et qui retourne son contenu.
+ * Concrêtement, ces fichiers sont des templates qui sont utilisés pour générer les pages HTML
+ * Paramètres : filename : nom du fichier à lire.
+ * Retourne : string, le contenu du fichier
+ */
 string HttpRequest::readFile(const char* filename){
 	ifstream in(filename);
 	stringstream out;
@@ -248,7 +272,12 @@ string HttpRequest::readFile(const char* filename){
 }
 
 
-
+/*
+ * Fonction qui permet d'exploser une string en tableau de string à partir d'un caractère séparateur.
+ * paramètres : str - la string à exploser
+ *				separator - le caractère séparateur à prendre en compte
+ * retourne : le tableau généré
+ */
 vector<string> HttpRequest::explode(const string& str, char separator)
 {
 	vector<string> dest;
